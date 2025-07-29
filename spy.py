@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, log_loss
 import joblib
 import yfinance as yf
+import requests
+import os
 
 # -------- 1. Fetch OHLCV from Yahoo Finance --------
 def fetch_sp500_data(start='2015-01-01', end=None):
@@ -362,3 +364,30 @@ print("Signal for tomorrow:", "BUY" if signal == 1 else "NO BUY")
 print(f"Entry price (next open): {entry_price:.2f}")
 print(f"Take Profit level: {take_profit:.2f}")
 print(f"Stop Loss level: {stop_loss:.2f} (initial SL; trailing SL applied during trade)")
+
+def send_telegram_message(bot_token, chat_id, message):
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message}
+    try:
+        response = requests.post(url, data=payload)
+        if response.status_code != 200:
+            print(f"Failed to send telegram message: {response.text}")
+    except Exception as e:
+        print(f"Exception in sending telegram message: {e}")
+
+# Fetch your bot token and chat id from environment variables (set in GitHub Actions)
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+if BOT_TOKEN and CHAT_ID:
+    msg = (
+        f"Prediction probability for next day up move: {pred_proba:.4f}\n"
+        f"Signal for tomorrow: {'BUY' if signal == 1 else 'NO BUY'}\n"
+        f"Entry price (next open): {entry_price:.2f}\n"
+        f"Take Profit level: {take_profit:.2f}\n"
+        f"Stop Loss level: {stop_loss:.2f}"
+    )
+    send_telegram_message(BOT_TOKEN, CHAT_ID, msg)
+else:
+    print("Telegram bot token or chat id not set.")
+
